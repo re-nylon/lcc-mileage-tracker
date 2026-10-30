@@ -41,7 +41,7 @@ The "Check in Google Maps" link opens `www.google.com/maps` only when it's click
 - **Sign-in:** the whole site, including its API, is behind **Cloudflare Access**. Only an allow-list of named email addresses can reach it, and they sign in with a one-time emailed code.
 - **Sync API:** `/api/trips` and `/api/settings` verify the Cloudflare Access login token itself (RS256 signature, audience, issuer and expiry) before reading or writing anything. It doesn't trust headers alone.
 - **No bypass routes:** the Worker's `workers.dev` address and preview URLs are switched off, so the Access-protected hostname is the only way in.
-- **API keys:** the OS Places and OpenRouteService browser keys are embedded in the page. They're only exposed to signed-in users.
+- **API keys:** the OS Places and OpenRouteService browser keys aren't in this repository. They're held as Worker secrets (`OS_KEY`, `ORS_KEY`) and handed to the page by `/api/config`, only after sign-in.
 
 ## Files
 
@@ -60,4 +60,4 @@ The "Check in Google Maps" link opens `www.google.com/maps` only when it's click
 deploy/deploy.sh
 ```
 
-This needs Wrangler logged in to the Cloudflare account. People are allowed or removed in the Cloudflare Zero Trust dashboard, under the "Mileage Tracker" Access application.
+This needs Wrangler logged in to the Cloudflare account, and the two key secrets set once with `wrangler secret put OS_KEY` and `wrangler secret put ORS_KEY`. People are allowed or removed in the Cloudflare Zero Trust dashboard, under the "Mileage Tracker" Access application.
