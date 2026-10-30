@@ -1,0 +1,12 @@
+{
+  // Serves the tracker's files, plus /api/settings (worker.js) so settings follow each person across browsers
+  "name": "miles",
+  "main": "worker.js",
+  "compatibility_date": "2026-05-18",
+  "assets": { "directory": "./site", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "kv_namespaces": [{ "binding": "DATA", "id": "3fe2864da2fb4fd6849f6df24a77cda9" }],
+  // Only reachable through miles.6nyn5.com, which Cloudflare Access protects. The workers.dev
+  // address and preview URLs would bypass Access, so both are switched off.
+  "workers_dev": false,
+  "preview_urls": false
+}

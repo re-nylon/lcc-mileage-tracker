@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#181e29" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mileage">
+<meta name="format-detection" content="telephone=no">
+<title>Mileage Tracker</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23c8102e'/%3E%3Cpath d='M24 8L13 56M40 8l11 48M32 13v6M32 29v6M32 45v6' stroke='%23fff' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;600;700;800&family=Overpass+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef0f3; --panel: #ffffff; --ink: #1d2433; --ink-2: #5b6475; --line: #dde1e7; --field: #f7f8fa;
+    --red: #c8102e; --red-ink: #a00d25; --red-wash: #fbe9ec;
+    --green: #00703c; --green-wash: #e3f2ea;
+    --amber: #a35f00; --amber-wash: #fff3dc;
+    --blue: #1f4e9c; --blue-wash: #e8eef8;
+    --dash: #1a2030; --dash-2: #252d40; --dash-ink: #f2f4f8; --dash-mute: #8d97ab;
+    --r-lg: 18px; --r-md: 12px; --r-sm: 9px;
+    --font: 'Overpass', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10141c; --panel: #181e29; --ink: #e8ebf0; --ink-2: #9aa3b2; --line: #283041; --field: #1f2633;
+      --red: #ff5468; --red-ink: #ff7a8a; --red-wash: #3a1820;
+      --green: #3ccf86; --green-wash: #14301f;
+      --amber: #ffb547; --amber-wash: #3a2a10;
+      --blue: #7aa7ff; --blue-wash: #182540;
+      --dash: #0b0e14; --dash-2: #1a2030;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; background: var(--bg); }
+  input[type=date] { -webkit-appearance: none; min-height: 48px; display: block; }
+  input[type=date]::-webkit-date-and-time-value { text-align: left; }
+  .mobile-only { display: none; }
+  body { font-family: var(--font); background: var(--bg); color: var(--ink); font-size: 16px; line-height: 1.5;
+         min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  a { color: var(--blue); }
+  :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 6px; }
+
+  /* ── Shell: sidebar on desktop, top bar + bottom tabs on mobile ── */
+  .shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  aside { position: sticky; top: 0; height: 100vh; padding: 22px 18px; display: flex; flex-direction: column; gap: 22px;
+          border-right: 1px solid var(--line); background: var(--panel); }
+  .brand { display: flex; align-items: center; gap: 11px; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 11px; background: var(--red); display: grid; place-items: center; flex-shrink: 0; }
+  .brand-mark svg { width: 22px; height: 22px; }
+  .brand b { display: block; font-size: 1.08rem; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; }
+  .brand span { font-size: .8rem; color: var(--ink-2); }
+
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  nav button { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; background: none; border-radius: var(--r-sm);
+               font: inherit; font-size: .95rem; font-weight: 600; color: var(--ink-2); cursor: pointer; text-align: left; }
+  nav button svg { width: 20px; height: 20px; flex-shrink: 0; }
+  nav button:hover { background: var(--field); color: var(--ink); }
+  nav button.active { background: var(--red-wash); color: var(--red-ink); }
+  nav .badge { margin-left: auto; min-width: 22px; padding: 0 7px; border-radius: 11px; background: var(--red); color: #fff;
+               font-size: .72rem; font-weight: 700; line-height: 22px; text-align: center; }
+  aside .foot { margin-top: auto; font-size: .78rem; color: var(--ink-2); }
+
+  main { padding: 32px 40px 80px; }
+  .panel { display: none; max-width: 720px; }
+  .panel.active { display: block; }
+  .page-head { margin-bottom: 20px; }
+  .page-head h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+  .page-head p { color: var(--ink-2); margin-top: 4px; max-width: 60ch; }
+
+  /* ── The odometer: the one loud thing ── */
+  .odo { background: var(--dash); color: var(--dash-ink); border-radius: var(--r-lg); padding: 16px 16px 14px; }
+  .odo-label { font-size: .8rem; color: var(--dash-mute); display: flex; justify-content: space-between; }
+  .odo-digits { display: flex; gap: 3px; margin: 8px 0 12px; font-family: var(--mono); font-weight: 700; font-size: 1.9rem; line-height: 1; }
+  .odo-cell { width: 1.02em; height: 1.32em; overflow: hidden; background: var(--dash-2); border-radius: 5px; position: relative;
+              box-shadow: inset 0 6px 8px -6px rgba(0,0,0,.7), inset 0 -6px 8px -6px rgba(0,0,0,.7); }
+  .odo-cell.tenth { background: var(--dash-ink); color: var(--dash); margin-left: 6px; }
+  .odo-cell.tenth::before { content: ''; position: absolute; left: -6px; bottom: .22em; width: 3px; height: 3px; border-radius: 50%; background: var(--dash-ink); }
+  .odo-strip { display: flex; flex-direction: column; align-items: center; transition: transform 1.1s cubic-bezier(.2,.8,.2,1); }
+  .odo-strip span { height: 1.32em; display: flex; align-items: center; }
+  .odo-track { position: relative; height: 6px; border-radius: 3px; background: var(--dash-2); overflow: hidden; }
+  .odo-fill { position: absolute; inset: 0 auto 0 0; background: var(--red); border-radius: 3px; transition: width 1.1s cubic-bezier(.2,.8,.2,1); }
+  .odo-scale { display: flex; justify-content: space-between; font-size: .74rem; color: var(--dash-mute); margin-top: 6px; }
+  .odo-scale b { color: var(--dash-ink); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .odo-strip, .odo-fill { transition: none; } }
+
+  /* ── Panels & fields ── */
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px; margin-bottom: 14px; }
+  .card h2 { font-size: 1.06rem; font-weight: 700; margin-bottom: 12px; letter-spacing: -.005em; }
+  .hint { font-size: .88rem; color: var(--ink-2); margin-bottom: 12px; }
+
+  .field { margin-bottom: 14px; } .field:last-child { margin-bottom: 0; }
+  .field > label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 5px; }
+  .field > label small { font-weight: 400; color: var(--ink-2); }
+  .row { display: flex; gap: 12px; } .row > * { flex: 1; min-width: 0; }
+  input, select, textarea { width: 100%; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: var(--r-md);
+         font: inherit; font-size: 1rem; background: var(--field); color: var(--ink); transition: border-color .15s, background .15s; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--red); background: var(--panel); }
+  select { appearance: none; padding-right: 36px;
+           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%238a93a3' stroke-width='2'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+           background-repeat: no-repeat; background-position: right 14px center; }
+  textarea { resize: vertical; min-height: 64px; }
+  .counter { font-size: .76rem; color: var(--ink-2); text-align: right; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+  .chip { border: 1.5px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 12px;
+          font: inherit; font-size: .84rem; font-weight: 600; cursor: pointer; color: var(--ink); }
+  .chip:hover { border-color: var(--red); color: var(--red-ink); }
+
+  .ac { position: relative; }
+  .ac ul { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 60; list-style: none; background: var(--panel);
+           border: 1px solid var(--line); border-radius: var(--r-md); max-height: 240px; overflow-y: auto;
+           box-shadow: 0 12px 32px -8px rgba(16,20,28,.28); display: none; padding: 4px; }
+  .ac ul.show { display: block; }
+  .ac li { padding: 9px 11px; font-size: .92rem; cursor: pointer; border-radius: 8px; display: flex; align-items: center; gap: 10px; }
+  .ac li span { flex: 1; }
+  .ac li small { color: var(--ink-2); font-size: .8rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ac li:hover, .ac li.on { background: var(--red-wash); }
+  .ac li.msg { cursor: default; color: var(--ink-2); background: none; }
+  .ac kbd { font: 600 .7rem var(--font); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px;
+            color: var(--ink-2); background: var(--panel); }
+  @media (hover: none) { .ac kbd { display: none; } }
+  /* Inline completion: the typed text is invisible, the rest of the place name shows faintly behind the caret */
+  .ac .ghost { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 14.5px; pointer-events: none;
+               white-space: pre; overflow: hidden; font-size: 1rem; color: transparent; }
+  .ac .ghost i { font-style: normal; color: var(--ink-2); opacity: .7; }
+
+  /* Route: stops hang off a vertical line, like a route on a map */
+  .route-line { position: relative; padding-left: 26px; }
+  .route-line::before { content: ''; position: absolute; left: 7px; top: 38px; bottom: 30px; border-left: 2px dashed var(--line); }
+  .route-line .field { position: relative; }
+  .route-line .field::before { content: ''; position: absolute; left: -24px; top: 41px; width: 12px; height: 12px; border-radius: 50%;
+                               border: 3px solid var(--red); background: var(--panel); }
+  .stop { display: flex; gap: 8px; align-items: flex-start; }
+  .stop .ac { flex: 1; }
+  .icon-btn { width: 46px; height: 46px; flex-shrink: 0; border: 1.5px solid var(--line); border-radius: var(--r-md); background: var(--panel);
+              color: var(--ink-2); font-size: 1.3rem; cursor: pointer; }
+  .icon-btn:hover { color: var(--red); border-color: var(--red); }
+
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 0; margin-top: 14px;
+            border-top: 1px solid var(--line); font-weight: 600; cursor: pointer; }
+  .switch input { appearance: none; width: 48px; height: 28px; border-radius: 14px; background: var(--line); position: relative;
+                  cursor: pointer; padding: 0; border: 0; flex-shrink: 0; transition: background .2s; }
+  .switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+                         box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+  .switch input:checked { background: var(--red); }
+  .switch input:checked::after { transform: translateX(20px); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border-radius: var(--r-md);
+         border: 1.5px solid var(--line); font: inherit; font-weight: 700; font-size: .95rem; cursor: pointer; background: var(--panel);
+         color: var(--ink); text-decoration: none; }
+  .btn:hover { border-color: var(--ink-2); }
+  .btn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.primary:hover { background: var(--red-ink); border-color: var(--red-ink); }
+  .btn.block { display: flex; width: 100%; }
+  .btn.lg { padding: 15px 20px; font-size: 1.05rem; }
+  .btn.sm { padding: 7px 12px; font-size: .85rem; border-radius: var(--r-sm); }
+  .btn.ghost { border-color: transparent; color: var(--ink-2); }
+  .btn.ghost:hover { background: var(--field); color: var(--ink); }
+  .btn:disabled { opacity: .4; cursor: default; pointer-events: none; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .result { background: var(--blue-wash); border-radius: var(--r-md); padding: 12px 14px; margin-top: 10px; font-size: .92rem; display: none; }
+  .result.show { display: block; }
+  .result b { color: var(--blue); font-size: 1.15rem; }
+
+  .alert { border-radius: var(--r-md); padding: 12px 14px; font-size: .92rem; margin-bottom: 14px; }
+  .alert.warn { background: var(--amber-wash); color: var(--amber); }
+  .alert.info { background: var(--blue-wash); color: var(--blue); }
+  .alert.ok   { background: var(--green-wash); color: var(--green); }
+
+  /* ── Log ── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line);
+           border-radius: var(--r-lg); overflow: hidden; margin-bottom: 14px; }
+  .stat { background: var(--panel); padding: 14px 16px; }
+  .stat b { display: block; font-size: 1.45rem; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: .82rem; color: var(--ink-2); }
+
+  .month { display: flex; justify-content: space-between; align-items: baseline; margin: 26px 0 10px; }
+  .month h3 { font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
+  .month span { font-size: .88rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .trip { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 8px;
+          display: grid; grid-template-columns: 52px 1fr auto; gap: 0 14px; }
+  .trip .day { text-align: center; line-height: 1.05; padding-top: 2px; }
+  .trip .day b { display: block; font-size: 1.5rem; font-weight: 800; }
+  .trip .day span { font-size: .78rem; color: var(--ink-2); }
+  .trip .route { font-weight: 700; line-height: 1.3; }
+  .trip .meta { font-size: .86rem; color: var(--ink-2); margin-top: 2px; }
+  .trip .nums { text-align: right; font-variant-numeric: tabular-nums; }
+  .trip .nums b { display: block; font-size: 1.05rem; }
+  .trip .nums span { font-size: .84rem; color: var(--ink-2); }
+  .trip .actions { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; align-items: center; }
+  .link { background: none; border: 0; padding: 0; font: inherit; font-size: .86rem; font-weight: 600; color: var(--ink-2); cursor: pointer; text-decoration: none; }
+  .link:hover { color: var(--red-ink); text-decoration: underline; }
+  .tag { font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+  .tag.pending { background: var(--amber-wash); color: var(--amber); }
+  .tag.sent { background: var(--green-wash); color: var(--green); }
+
+  /* ── Oracle ── */
+  .steps { padding-left: 22px; } .steps li { margin-bottom: 10px; padding-left: 4px; }
+  .steps li::marker { font-weight: 800; color: var(--red); }
+  .bm { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; margin: 6px 0 4px; border-radius: 999px; background: var(--red);
+        color: #fff; font-weight: 700; text-decoration: none; cursor: grab; }
+  .bm::before { content: '★'; }
+
+  table.rpt { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  table.rpt th, table.rpt td { text-align: left; padding: 9px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.rpt th { font-size: .82rem; font-weight: 600; color: var(--ink-2); }
+  table.rpt td.n, table.rpt th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.rpt tr.total td { font-weight: 800; border-bottom: 0; border-top: 2px solid var(--ink); }
+
+  /* ── Help ── */
+  .video { width: 100%; border-radius: var(--r-lg); background: #000; display: block; aspect-ratio: 16 / 9; }
+  .help h2 { font-size: 1.3rem; font-weight: 800; margin: 30px 0 10px; letter-spacing: -.01em; }
+  .help p, .help li { max-width: 66ch; }
+  .help ol, .help ul { padding-left: 22px; } .help li { margin-bottom: 7px; }
+  .help ol li::marker { font-weight: 800; color: var(--red); }
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
+  summary { padding: 13px 16px; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '+'; color: var(--ink-2); font-weight: 400; font-size: 1.3rem; line-height: 1; }
+  details[open] summary::after { content: '−'; }
+  details p { padding: 0 16px 14px; color: var(--ink-2); }
+
+  .sync-row { font-size: .88rem; color: var(--ink-2); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+  .sync-row .link { color: var(--blue); }
+  .empty { text-align: center; color: var(--ink-2); padding: 48px 16px; }
+  .empty b { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 4px; }
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px); background: var(--ink); color: var(--panel);
+           padding: 12px 18px; border-radius: var(--r-md); font-weight: 600; font-size: .92rem; opacity: 0; transition: opacity .2s, transform .2s;
+           pointer-events: none; z-index: 100; max-width: calc(100vw - 32px); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ── Phone (tuned for iPhone 16 Pro Max: 440 × 956 pt, Dynamic Island, home bar) ── */
+  @media (max-width: 880px) {
+    :root { --nav-h: 62px; --safe-b: env(safe-area-inset-bottom, 0px); }
+    .shell { display: block; }
+    .mobile-only { display: block; }
+    .desktop-only { display: none !important; }
+
+    /* Brand and odometer share one compact band under the Dynamic Island */
+    aside { position: static; height: auto; gap: 12px; border-right: 0; border-bottom: 1px solid var(--line);
+            padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 14px; }
+    .brand-mark { width: 32px; height: 32px; border-radius: 9px; }
+    .brand-mark svg { width: 18px; height: 18px; }
+    .brand span { display: none; }
+    aside .foot { display: none; }
+    .odo { padding: 12px 14px 11px; display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: center; }
+    .odo-label { grid-column: 1 / -1; }
+    .odo-digits { font-size: 1.55rem; margin: 6px 0 8px; grid-column: 1; }
+    .odo-track { grid-column: 2; align-self: center; }
+    .odo-scale { grid-column: 1 / -1; margin-top: 2px; }
+
+    /* Tab bar sits above the home indicator; every target at least 44 pt */
+    nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; flex-direction: row; gap: 0;
+          background: color-mix(in srgb, var(--panel) 88%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
+          border-top: 1px solid var(--line); padding: 4px 6px var(--safe-b); }
+    nav button { flex: 1; flex-direction: column; gap: 3px; padding: 8px 0 6px; min-height: var(--nav-h); font-size: .7rem; position: relative; justify-content: center; }
+    nav button svg { width: 24px; height: 24px; }
+    nav button:hover { background: none; }
+    nav button.active { background: none; color: var(--red-ink); }
+    nav .badge { position: absolute; top: 4px; left: calc(50% + 7px); margin: 0; min-width: 18px; line-height: 18px; font-size: .66rem; padding: 0 5px; }
+
+    main { padding: 22px 16px calc(var(--nav-h) + var(--safe-b) + 28px); }
+    .page-head h1 { font-size: 1.7rem; }
+    .page-head p { font-size: .95rem; }
+    .card { padding: 16px; border-radius: 16px; }
+    .stats { grid-template-columns: repeat(3, 1fr); }
+    .stat { padding: 12px; } .stat b { font-size: 1.2rem; } .stat span { font-size: .78rem; display: block; line-height: 1.3; }
+    input, select, textarea { min-height: 48px; }
+    .switch input { min-height: 0; }
+    .btn { min-height: 48px; }
+    .btn.sm { min-height: 40px; }
+    .icon-btn { width: 48px; height: 48px; }
+    .chip { padding: 7px 14px; font-size: .9rem; }
+
+    /* Save sits in thumb reach, just above the tab bar */
+    #panel-trip { padding-bottom: 72px; }
+    #save-trip { position: fixed; left: 16px; right: 16px; width: auto; z-index: 70;
+                 bottom: calc(var(--nav-h) + var(--safe-b) + 14px); box-shadow: 0 8px 24px -6px rgba(200,16,46,.55); }
+    body:not(.on-trip) #save-trip { display: none; }
+
+    /* Trip cards: bigger tap targets for the actions */
+    .trip { grid-template-columns: 44px 1fr auto; padding: 14px; gap: 0 12px; }
+    .trip .actions { grid-column: 1 / -1; gap: 6px; margin-top: 12px; }
+    .trip .actions .link { padding: 8px 12px; border-radius: 999px; background: var(--field); text-decoration: none; min-height: 36px; display: inline-flex; align-items: center; }
+    .trip .actions .tag { padding: 8px 12px; }
+
+    .toast { bottom: calc(var(--nav-h) + var(--safe-b) + 84px); }
+  }
+  @media (max-width: 400px) { .row.wrap-sm { flex-direction: column; gap: 0; } }
+
+  @media print {
+    aside, nav, .no-print, .toast { display: none !important; }
+    .shell { display: block; } main { padding: 0; }
+    .panel { display: none !important; }
+    #panel-reports { display: block !important; max-width: none; }
+    .card { border: 0; padding: 0; }
+    body { background: #fff; color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside>
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3L5 21M15 3l4 18M12 5v2M12 11v2M12 17v2"/></svg>
+    </div>
+    <div><b>Mileage Tracker</b><span>Lancashire County Council</span></div>
+  </div>
+
+  <div class="odo" aria-live="polite">
+    <div class="odo-label"><span>Miles this tax year</span><span id="odo-year"></span></div>
+    <div class="odo-digits" id="odo-digits" role="img" aria-label="0 miles"></div>
+    <div class="odo-track"><div class="odo-fill" id="odo-fill" style="width:0"></div></div>
+    <div class="odo-scale"><span id="odo-rate"></span><span id="odo-left"></span></div>
+  </div>
+
+  <nav aria-label="Sections">
+    <button data-tab="trip" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New trip</button>
+    <button data-tab="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Log</button>
+    <button data-tab="oracle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>Oracle<span class="badge" id="pending-badge" hidden>0</span></button>
+    <button data-tab="reports">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>Reports</button>
+    <button data-tab="help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5h.01"/></svg>Help</button>
+    <button data-tab="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Settings</button>
+  </nav>
+
+  <div class="foot"><span data-sync-note>Trips are saved in this browser.</span></div>
+</aside>
+
+<main>
+
+<!-- ============================================================ NEW TRIP -->
+<section id="panel-trip" class="panel active">
+  <div class="page-head">
+    <h1 id="trip-heading">Log a trip</h1>
+    <p>Fill this in after each journey. Everything here matches the Oracle mileage form.</p>
+  </div>
+
+  <div class="card">
+    <div class="row wrap-sm">
+      <div class="field"><label for="f-date">Journey date</label><input type="date" id="f-date"></div>
+      <div class="field"><label for="f-type">Journey type</label>
+        <select id="f-type">
+          <option>Business</option><option>Excess Travel</option><option>Home To School</option><option>Training</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Route</h2>
+    <div class="route-line">
+      <div class="field">
+        <label for="f-from">Start</label>
+        <div class="ac"><input id="f-from" data-addr placeholder="Address and town, or postcode" autocomplete="off" autocorrect="off" enterkeyhint="next"><ul></ul></div>
+        <div class="chips" data-for="f-from"></div>
+      </div>
+      <div id="stops"></div>
+    </div>
+    <button class="btn sm ghost" id="add-stop">+ Add another stop</button>
+    <label class="switch"><span>Return journey, back to the start</span><input type="checkbox" id="f-rt"></label>
+  </div>
+
+  <div class="card">
+    <h2>Claim</h2>
+    <div class="row">
+      <div class="field">
+        <label for="f-miles">Miles</label>
+        <input type="number" id="f-miles" step="0.1" min="0" inputmode="decimal" placeholder="0.0">
+      </div>
+      <div class="field">
+        <label for="f-pass">Passengers</label>
+        <input type="number" id="f-pass" min="0" step="1" value="0" inputmode="numeric">
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn" id="calc" style="flex:1">Work out miles from route</button>
+      <a class="btn" id="gmaps" target="_blank" rel="noopener" hidden>Check in Google Maps ↗</a>
+    </div>
+    <div class="result" id="calc-result"></div>
+
+    <div class="field" style="margin-top:16px">
+      <label for="f-reason">Reason for journey</label>
+      <input id="f-reason" maxlength="150" autocapitalize="sentences" enterkeyhint="done" placeholder="For example, home visit or team meeting">
+      <div class="chips" id="reason-chips"></div>
+    </div>
+    <div class="field">
+      <label for="f-route">Route details <small>written for you from the addresses, edit if needed</small></label>
+      <textarea id="f-route" maxlength="150"></textarea>
+      <div class="counter"><span id="route-count">0</span> of 150</div>
+    </div>
+  </div>
+
+  <button class="btn primary block lg" id="save-trip">Save trip</button>
+</section>
+
+<!-- ============================================================ LOG -->
+<section id="panel-log" class="panel">
+  <div class="page-head"><h1>Your trips</h1>
+    <p class="sync-row"><span data-sync-note>Trips are saved in this browser.</span> <button class="link" onclick="syncNow(this)">Sync now</button></p></div>
+  <div class="stats">
+    <div class="stat"><b id="st-money">£0.00</b><span>Estimated claim this tax year</span></div>
+    <div class="stat"><b id="st-trips">0</b><span>Trips this tax year</span></div>
+    <div class="stat"><b id="st-rate">45p</b><span>Rate per mile now</span></div>
+  </div>
+  <div id="threshold" class="alert warn" hidden></div>
+  <div id="trip-list"></div>
+</section>
+
+<!-- ============================================================ ORACLE -->
+<section id="panel-oracle" class="panel">
+  <div class="page-head">
+    <h1>Send trips to Oracle</h1>
+    <p>Copy your trips here, then let the bookmark fill in the Oracle form one trip at a time. You check and submit each one.</p>
+  </div>
+  <div class="alert info mobile-only">Log trips on your phone as you go. The Oracle bookmark works on your work computer, so do this part there. Move your trips across with <b>Download backup</b> and <b>Restore backup</b> in Settings.</div>
+  <div class="card">
+    <div id="oracle-status"></div>
+    <div class="btns" style="margin-top:14px">
+      <button class="btn primary" id="copy-pending">Copy trips waiting to go into Oracle</button>
+      <button class="btn" id="mark-all-sent">Mark them all as done</button>
+    </div>
+  </div>
+
+  <div class="card desktop-only">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><b>Once only:</b> drag this button onto your browser's bookmarks bar.<br>
+        <a class="bm" id="bookmarklet" href="#">Fill Oracle Mileage</a><br>
+        <span class="hint">Can't drag it? Right-click it and choose <i>Bookmark link</i> or <i>Add to favourites</i>.</span></li>
+      <li>Click <b>Copy trips waiting to go into Oracle</b>.</li>
+      <li>In Oracle, open a new Mileage <b>Personal Contribution</b>.</li>
+      <li>Click the <b>Fill Oracle Mileage</b> bookmark. The first time, it loads the trips you copied.</li>
+      <li><b>Check the fields</b>, then click Continue and Submit in Oracle. The bookmark never submits for you.</li>
+      <li>Start the next contribution and click the bookmark again. It remembers which trip is next.</li>
+      <li>Come back here and click <b>Mark them all as done</b>.</li>
+    </ol>
+    <div class="alert info" style="margin:6px 0 0">If a field doesn't fill, most likely Vehicle, pick it yourself. The bookmark tells you which fields it couldn't do.</div>
+  </div>
+</section>
+
+<!-- ============================================================ REPORTS -->
+<section id="panel-reports" class="panel">
+  <div class="page-head no-print"><h1>Reports</h1><p>Pick a period, then print it or save it as a PDF.</p></div>
+  <div class="card">
+    <div class="row no-print" style="margin-bottom:12px">
+      <div class="field"><label for="rp-from">From</label><input type="date" id="rp-from"></div>
+      <div class="field"><label for="rp-to">To</label><input type="date" id="rp-to"></div>
+    </div>
+    <div class="btns no-print" style="margin-bottom:18px">
+      <button class="btn sm" data-range="month">This month</button>
+      <button class="btn sm" data-range="lastmonth">Last month</button>
+      <button class="btn sm" data-range="taxyear">Tax year</button>
+      <button class="btn sm primary" onclick="window.print()">Print or save PDF</button>
+    </div>
+    <div id="report"></div>
+  </div>
+</section>
+
+<!-- ============================================================ HELP -->
+<section id="panel-help" class="panel help">
+  <div class="page-head">
+    <h1>How to use it</h1>
+    <p>A 2½-minute walkthrough, then the steps written out.</p>
+  </div>
+
+  <video class="video" controls preload="metadata" id="help-video">
+    <source src="Mileage%20Tracker%20-%20How%20To.mp4" type="video/mp4" id="help-video-src">
+  </video>
+  <div class="alert info" id="video-missing" style="margin-top:10px" hidden>
+    The video isn't next to this file. Keep <b>Mileage Tracker - How To.mp4</b> in the same folder as the tracker to watch it here.
+  </div>
+  <p class="hint" style="margin-top:8px">The Oracle screen in the video is an illustration. The real one looks slightly different, but the fields are the same.</p>
+
+  <h2>Set up once</h2>
+  <ol>
+    <li>In <b>Settings</b>, type your car registration exactly as Oracle shows it.</li>
+    <li>Add places you go often, such as Home and Office. They become quick buttons when you log a trip.</li>
+    <li>Click <b>Save settings</b>.</li>
+    <li>On the <b>Oracle</b> page, drag the red <b>Fill Oracle Mileage</b> button onto your bookmarks bar. Press Ctrl+Shift+B if the bar is hidden.</li>
+  </ol>
+
+  <h2>Log a trip</h2>
+  <ol>
+    <li>Open <b>New trip</b>. Today's date is filled in, so change it if the trip was earlier.</li>
+    <li>Choose the journey type. The choices match Oracle.</li>
+    <li>Enter the start and where you went. Tap a saved place or pick from the suggestions. Add more stops if you need them.</li>
+    <li>Turn on <b>Return journey</b> if you drove back.</li>
+    <li>Click <b>Work out miles from route</b>, or type the miles. <b>Check in Google Maps</b> opens the same route if you want to compare.</li>
+    <li>Add the reason. Route details are written for you.</li>
+    <li>Click <b>Save trip</b>. Doing the same journey again? Click <b>repeat</b> on it in the Log.</li>
+  </ol>
+
+  <h2>Put trips into Oracle</h2>
+  <ol>
+    <li>On the <b>Oracle</b> page, click <b>Copy trips waiting to go into Oracle</b>.</li>
+    <li>In Oracle, open a new Mileage Personal Contribution.</li>
+    <li>Click the <b>Fill Oracle Mileage</b> bookmark. Allow it to read what you copied, or paste with Ctrl+V if it asks.</li>
+    <li>Check every field, then click Continue and Submit yourself.</li>
+    <li>For the next trip, open a new contribution and click the bookmark again.</li>
+    <li>When they're all in, click <b>Mark them all as done</b> in the tracker.</li>
+  </ol>
+
+  <h2>Keep a backup</h2>
+  <p>Your trips live in this browser only. Once a month, go to <b>Settings</b> and click <b>Download backup</b>. Save the file somewhere safe, like OneDrive. Use <b>Restore backup</b> to bring trips back or move them to another computer.</p>
+
+  <h2>Something not working?</h2>
+  <details><summary>The bookmark says to open a Personal Contribution first</summary>
+    <p>You're on a different Oracle screen. Open the form with Journey Date, Vehicle and Journey Type, then click the bookmark again.</p></details>
+  <details><summary>Vehicle didn't fill in</summary>
+    <p>Pick it from Oracle's list. If it isn't there, Oracle needs a Maintain Vehicle Details record with an up-to-date insurance expiry date, approved by your line manager. Also check the registration in Settings matches Oracle exactly.</p></details>
+  <details><summary>Nothing happens when I click the bookmark</summary>
+    <p>Your work computer may block bookmarks that run code. Ask IT, or copy the details across by hand from the Oracle page here.</p></details>
+  <details><summary>The wrong trip came up next</summary>
+    <p>Copy your trips again here, then click the bookmark in Oracle and choose Cancel to load the fresh list.</p></details>
+  <details><summary>The address I want isn't suggested</summary>
+    <p>Addresses come from Ordnance Survey, which has every UK address. Places in Lancashire and nearby come first. If the one you want isn't listed, type a bit more of it, add the town, or type the postcode, which lists every house in it.</p></details>
+  <details><summary>No address suggestions, or a route service error</summary>
+    <p>Check you're online, or type the miles yourself. If it keeps happening, the built-in route key may have reached its daily limit. Try again tomorrow.</p></details>
+  <details><summary>My trips have disappeared</summary>
+    <p>You're probably in a different browser or on a different computer, or browsing data was cleared. Go to Settings and use Restore backup with your latest backup file.</p></details>
+  <details><summary>The miles differ from Google Maps</summary>
+    <p>The tracker uses the quickest route and Google may pick another. Use whichever figure your manager checks against.</p></details>
+  <details><summary>Are the £ amounts what I'll be paid?</summary>
+    <p>They're estimates at HMRC rates: 45p a mile for the first 10,000 miles in a tax year, then 25p. Oracle works out the actual payment.</p></details>
+</section>
+
+<!-- ============================================================ SETTINGS -->
+<section id="panel-settings" class="panel">
+  <div class="page-head"><h1>Settings</h1></div>
+  <div class="card">
+    <h2>Your vehicle</h2>
+    <div class="row">
+      <div class="field"><label for="s-reg">Registration, as Oracle shows it</label><input id="s-reg" placeholder="AB12 CDE" style="text-transform:uppercase"></div>
+      <div class="field"><label for="s-veh">Type</label>
+        <select id="s-veh"><option value="car">Car or van</option><option value="moto">Motorcycle</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Saved places</h2>
+    <p class="hint">These show as quick buttons under each address box. On the website, your vehicle, places and rates are saved to your account, so they appear on any phone or computer you sign in on.</p>
+    <div id="places"></div>
+    <div class="row wrap-sm" style="margin-top:10px">
+      <div class="field"><label for="pl-name">Name</label><input id="pl-name" placeholder="Office"></div>
+      <div class="field"><label for="pl-addr">Address or postcode</label>
+        <div class="ac"><input id="pl-addr" data-addr placeholder="Start typing the address" autocomplete="off" autocorrect="off"><ul></ul></div></div>
+    </div>
+    <button class="btn sm" id="pl-add" style="margin-top:10px">Add place</button>
+  </div>
+
+  <div class="card">
+    <h2>Rates for estimates</h2>
+    <p class="hint">Oracle works out the real payment. These HMRC rates are only used for the estimates in this tracker.</p>
+    <div class="row">
+      <div class="field"><label for="s-r1">Car, first band (p)</label><input type="number" id="s-r1" step="0.5"></div>
+      <div class="field"><label for="s-r2">Car, after band (p)</label><input type="number" id="s-r2" step="0.5"></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <div class="field"><label for="s-r3">Motorcycle (p)</label><input type="number" id="s-r3" step="0.5"></div>
+      <div class="field"><label for="s-th">Band limit (miles)</label><input type="number" id="s-th"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Address lookup key</h2>
+    <p class="hint">Addresses come from Ordnance Survey, which has every UK address including house numbers and flats. On the website a key is provided when you sign in.
+      Only change it if you have another <a href="https://osdatahub.os.uk/" target="_blank" rel="noopener">OS Data Hub</a> key. Clear the box and save to go back to the provided key.</p>
+    <input id="s-oskey" placeholder="OS Places key" autocomplete="off" spellcheck="false">
+  </div>
+
+  <div class="card">
+    <h2>Route lookup key</h2>
+    <p class="hint">On the website a key is provided when you sign in. Only change it if you have your own free key from
+      <a href="https://openrouteservice.org/dev/#/signup" target="_blank" rel="noopener">openrouteservice.org</a>. Clear the box and save to go back to the provided key.</p>
+    <input id="s-key" placeholder="Paste a key">
+  </div>
+
+  <button class="btn primary block lg" id="save-settings" style="margin-bottom:14px">Save settings</button>
+
+  <div class="card">
+    <h2>Sync and backup</h2>
+    <p class="hint">On the website, trips and settings sync to your account, so every phone and computer you sign in on shows the same log.
+      They sync when the app opens and whenever you change something. Use Sync now to do it straight away.</p>
+    <p class="hint" data-sync-note>Trips are saved in this browser.</p>
+    <div class="btns">
+      <button class="btn sm primary" onclick="syncNow(this)">Sync now</button>
+      <button class="btn sm" id="bk-json">Download backup</button>
+      <button class="btn sm" id="bk-restore">Restore backup</button>
+      <button class="btn sm ghost" id="bk-csv">Export CSV</button>
+      <input type="file" id="bk-file" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ================================================================
+   State & persistence
+   ================================================================ */
+const KEY_TRIPS = 'mileage_trips_v2';
+const KEY_CFG   = 'mileage_cfg_v2';
+const KEY_DELETED = 'mileage_deleted_v2';   // deleted trip ids, kept so the deletion syncs to other devices
+const ORS = 'https://api.openrouteservice.org';
+// Built-in keys for OS Places and OpenRouteService. They aren't in the code: on the website they come from
+// /api/config after sign-in (see loadConfig). Opened as a local file, add your own in Settings.
+let OS_DEFAULT_KEY = '';
+let ORS_DEFAULT_KEY = '';
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let trips = [];
+let deleted = [];   // [{ id, deleted: true, updated }]
+let cfg = { apiKey:'', osKey:'', reg:'', vehicle:'car', places:[], r1:45, r2:25, r3:24, thresh:10000 };
+let coords = {};          // inputId -> [lon, lat]
+let editingId = null;
+let stopSeq = 0;
+
+function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(_) { toast('Could not save — browser storage is blocked'); } }
+function fetchStore(key) { try { return JSON.parse(localStorage.getItem(key)); } catch(_) { return null; } }
+
+function load() {
+  cfg = { ...cfg, ...(fetchStore(KEY_CFG) || {}) };
+  trips = fetchStore(KEY_TRIPS) || [];
+  deleted = fetchStore(KEY_DELETED) || [];
+  adoptV1Trips();
+  if (!cfg.apiKey) cfg.apiKey = ORS_DEFAULT_KEY;
+  if (!cfg.osKey) cfg.osKey = OS_DEFAULT_KEY;
+}
+function saveTrips() { store(KEY_TRIPS, trips); store(KEY_DELETED, deleted); updateBadge(); renderOdo(); syncTrips(); }
+function saveCfg()   { store(KEY_CFG, cfg); pushSettings(); }
+
+// Bring across trips from the first version of the tracker
+// Trips logged in the first version of the tracker live under another key. Bring in any this browser
+// hasn't seen yet, every time, so a trip logged in the old version after the new one was opened isn't stranded.
+function adoptV1Trips() {
+  const known = new Set([...trips, ...deleted].map(t => t.id));
+  const add = (fetchStore('lcc_trips') || []).filter(t => t && !known.has(t.id) && t.date).map(t => ({
+    id: t.id, date: t.date, from: t.origin || '', stops: [...(t.stops || []), t.dest].filter(Boolean),
+    rt: !!t.rt, miles: +t.miles || 0, type: 'Business', reason: t.notes || '', route: t.route || '',
+    passengers: 0, vehicle: t.vehicle === 'Motorcycle' ? 'moto' : 'car', status: 'pending', updated: 0   // oldest possible, so a synced deletion wins
+  }));
+  if (add.length) { trips.push(...add); store(KEY_TRIPS, trips); }
+}
+
+/* ================================================================
+   Settings sync: on the website, vehicle, places and rates are kept on
+   the signed-in person's account so every browser gets the same ones.
+   Opened as a local file, this browser's storage is all there is.
+   ================================================================ */
+const SYNC = location.protocol.startsWith('http');
+const SYNC_FIELDS = ['reg', 'vehicle', 'places', 'r1', 'r2', 'r3', 'thresh'];
+
+async function pullSettings() {
+  if (!SYNC) return;
+  try {
+    const res = await fetch('/api/settings', { cache: 'no-store' });
+    if (!res.ok) return;
+    const { settings } = await res.json();
+    if (!settings) {
+      // First sign-in on the account: keep what this browser already has
+      if (cfg.reg || cfg.places.length) pushSettings();
+      return;
+    }
+    SYNC_FIELDS.forEach(k => { if (k in settings) cfg[k] = settings[k]; });
+    store(KEY_CFG, cfg);   // not saveCfg: that would send the same settings straight back
+    renderSettings(); renderOdo();
+    if (document.getElementById('panel-log').classList.contains('active')) renderLog();
+  } catch(_) { /* offline or signed out: this browser's copy still works */ }
+}
+
+// Trips: send everything this browser has (deletions included); the server merges trip by trip,
+// keeping whichever copy changed last, and sends back the whole log, which this browser then adopts.
+let syncTimer, syncing = false, syncAgain = false;
+function syncTrips() {
+  if (!SYNC) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(runSync, 500);
+}
+async function runSync() {
+  if (!SYNC) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
+  const snapshot = JSON.stringify([trips, deleted]);
+  try {
+    const res = await fetch('/api/trips', { method: 'PUT', headers: { 'content-type': 'application/json' },
+                                            body: JSON.stringify({ trips: [...trips, ...deleted] }) });
+    if (!res.ok) throw new Error(res.status);
+    const merged = (await res.json()).trips;
+    if (JSON.stringify([trips, deleted]) === snapshot) {
+      trips = merged.filter(t => !t.deleted);
+      deleted = merged.filter(t => t.deleted);
+      store(KEY_TRIPS, trips); store(KEY_DELETED, deleted);
+      updateBadge(); renderOdo(); renderReasonChips();
+      const open = document.querySelector('.panel.active')?.id;
+      if (open === 'panel-log') renderLog();
+      if (open === 'panel-oracle') renderOracle();
+      if (open === 'panel-reports') renderReport();
+    } else syncAgain = true;   // changed while the request was out; send again with the change
+    setSyncNote(true);
+  } catch(_) { setSyncNote(false); }
+  syncing = false;
+  if (syncAgain) { syncAgain = false; syncTrips(); }
+}
+function setSyncNote(ok) {
+  const n = `${trips.length} trip${trips.length === 1 ? '' : 's'}`;
+  const text = ok ? `${n}, synced at ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                  : `${n} on this device. Not synced yet. They're safe here and will sync when you're back online.`;
+  document.querySelectorAll('[data-sync-note]').forEach(el => el.textContent = text);
+}
+
+async function syncNow(btn) {
+  btn.disabled = true; btn.textContent = 'Syncing…';
+  await runSync(); await pullSettings();
+  btn.disabled = false; btn.textContent = 'Sync now';
+  toast(document.querySelector('[data-sync-note]').textContent);
+}
+
+async function loadConfig() {
+  if (!SYNC) return;
+  try {
+    const res = await fetch('/api/config', { cache: 'no-store' });
+    if (!res.ok) return;
+    const c = await res.json();
+    OS_DEFAULT_KEY = c.osKey || ''; ORS_DEFAULT_KEY = c.orsKey || '';
+    if (!cfg.osKey) cfg.osKey = OS_DEFAULT_KEY;
+    if (!cfg.apiKey) cfg.apiKey = ORS_DEFAULT_KEY;
+    store(KEY_CFG, cfg);
+  } catch(_) { /* offline: keys saved in this browser from an earlier visit still work */ }
+}
+
+let pushTimer;
+function pushSettings() {
+  if (!SYNC) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    try {
+      const res = await fetch('/api/settings', { method: 'PUT', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(SYNC_FIELDS.map(k => [k, cfg[k]]))) });
+      if (!res.ok) throw new Error(res.status);
+    } catch(_) { toast("Saved on this device only. Couldn't reach your account, so try saving again later."); }
+  }, 400);
+}
+
+/* ================================================================
+   Dates & tax year
+   ================================================================ */
+function iso(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function today() { return iso(new Date()); }
+function parse(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function fmtDate(s) { return parse(s).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }); }
+function fmtLong(s) { return parse(s).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }); }
+
+function taxYear(s) {
+  const d = s ? parse(s) : new Date();
+  const y = d.getFullYear(), m = d.getMonth() + 1;
+  const start = (m > 4 || (m === 4 && d.getDate() >= 6)) ? y : y - 1;
+  return { start:`${start}-04-06`, end:`${start+1}-04-05`, label:`${start}/${String(start+1).slice(2)}` };
+}
+
+/* ================================================================
+   Claim estimates — worked out in date order so backdated trips
+   land in the right rate band
+   ================================================================ */
+function estimates() {
+  const out = {}, running = {};
+  [...trips].sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id).forEach(t => {
+    if (t.vehicle === 'moto') { out[t.id] = t.miles * cfg.r3 / 100; return; }
+    const ty = taxYear(t.date).start;
+    const prior = running[ty] || 0;
+    const lo = Math.max(0, Math.min(t.miles, cfg.thresh - prior));
+    out[t.id] = (lo * cfg.r1 + (t.miles - lo) * cfg.r2) / 100;
+    running[ty] = prior + t.miles;
+  });
+  return out;
+}
+function yearMiles() {
+  const ty = taxYear();
+  return trips.filter(t => t.vehicle !== 'moto' && t.date >= ty.start && t.date <= ty.end).reduce((s,t) => s + t.miles, 0);
+}
+const money = n => n.toLocaleString('en-GB', { style: 'currency', currency: 'GBP' });
+const r1 = n => Math.round(n * 10) / 10;
+
+/* ================================================================
+   Address inputs, autocomplete & saved places
+   ================================================================ */
+const acTimers = {};
+
+const HOME = { lat: 53.661982, lon: -2.782094 };   // PR26 9RU: searches favour places near here
+const NEAR_MILES = 25;
+
+function milesFrom(lon, lat) {
+  const R = 3958.8, rad = d => d * Math.PI / 180;
+  const dLat = rad(lat - HOME.lat), dLon = rad(lon - HOME.lon);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(HOME.lat)) * Math.cos(rad(lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+const cleanLabel = l => l.replace(/(,\s*(England|United Kingdom|UK))+$/i, '').trim();
+const FAR_MILES = 40;   // a guessed address further than this from home is treated as a wrong match
+
+// UK postcodes, looked up on postcodes.io (free, no key, official postcode data)
+const POSTCODE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
+async function postcodeLookup(text) {
+  const m = text.match(POSTCODE);
+  if (!m) return null;
+  const pc = `${m[1]} ${m[2]}`.toUpperCase();
+  try {
+    const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(pc)}`);
+    if (!res.ok) return null;
+    const { result } = await res.json();
+    return { pc, coord: [result.longitude, result.latitude], label: text.replace(POSTCODE, pc) };
+  } catch(_) { return null; }
+}
+
+// GET from OpenRouteService, falling back to the built-in key if a saved key has stopped working.
+// A rejected key comes back without CORS headers, so the browser reports it as a network error, not a 403.
+async function orsGet(path, params) {
+  const run = key => fetch(`${ORS}${path}?${new URLSearchParams({ api_key: key, ...params })}`);
+  let res = null;
+  try { res = await run(cfg.apiKey); } catch(e) { if (cfg.apiKey === ORS_DEFAULT_KEY) throw e; }
+  if ((!res || res.status === 401 || res.status === 403) && cfg.apiKey !== ORS_DEFAULT_KEY) {
+    cfg.apiKey = ORS_DEFAULT_KEY; saveCfg();
+    res = await run(cfg.apiKey);
+  }
+  if (!res.ok) throw new Error(`Address lookup error ${res.status}`);
+  return res.json();
+}
+
+// Address suggestions count against a daily quota, so the same text is only ever looked up once
+const acCache = new Map();
+function acLook(text) {
+  const key = text.toLowerCase();
+  if (!acCache.has(key)) {
+    const p = orsGet('/geocode/autocomplete', { text, 'boundary.country': 'GBR', size: 10,
+                                               'focus.point.lat': HOME.lat, 'focus.point.lon': HOME.lon });
+    p.catch(() => acCache.delete(key));   // don't remember failures
+    acCache.set(key, p);
+  }
+  return acCache.get(key);
+}
+
+// Ordnance Survey Places: every UK address (AddressBase), house numbers and flats included.
+// Results come back shaped like the map search's, so the rest of the code treats them the same.
+const OS_PLACES = 'https://api.os.uk/search/places/v1/find';
+function osAddressLabel(dpa) {
+  // "311F, ORMSKIRK ROAD, SKELMERSDALE, WN8 9AJ" → "311F Ormskirk Road, Skelmersdale, WN8 9AJ"
+  const parts = dpa.ADDRESS.split(', ').map(p => p === dpa.POSTCODE ? p
+    : p.toLowerCase().split(' ').map(w => /\d/.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+  if (parts.length > 1 && /^\d+[A-Z]?$/.test(parts[0])) parts.splice(0, 2, `${parts[0]} ${parts[1]}`);
+  return parts.join(', ');
+}
+// OS ranks matches nationally, so a half-typed address can lose to one in York. Search the councils she
+// works across (all of Lancashire, plus neighbours within about 25 miles of home) alongside the national search.
+const LOCAL_COUNCILS = [
+  2315, 2320, 2325, 2330, 2335, 2340, 2345, 2350, 2355, 2360, 2365, 2370,   // Lancashire districts
+  2372, 2373,                                                               // Blackburn with Darwen, Blackpool
+  4205, 4250, 4305, 4310, 4315, 4320                                        // Bolton, Wigan, Knowsley, Liverpool, St Helens, Sefton
+];
+function osFind(text, local) {
+  const params = { query: text, maxresults: local ? 10 : 20, output_srs: 'EPSG:4326', key: cfg.osKey };
+  if (local) params.fq = LOCAL_COUNCILS.map(c => `LOCAL_CUSTODIAN_CODE:${c}`).join(' ');
+  return fetch(`${OS_PLACES}?${new URLSearchParams(params)}`).then(async res => {
+    if (!res.ok) throw new Error(`OS Places error ${res.status}`);
+    return ((await res.json()).results || []).map(r => r.DPA).filter(d => d && d.LNG != null);
+  });
+}
+function osLook(text) {
+  const key = 'os:' + text.toLowerCase();
+  if (!acCache.has(key)) {
+    const p = Promise.allSettled([osFind(text, true), osFind(text, false)]).then(([local, national]) => {
+      if (local.status === 'rejected' && national.status === 'rejected') throw local.reason;
+      const seen = new Set();
+      return { features: [...(local.value || []), ...(national.value || [])]
+        .filter(d => !seen.has(d.UPRN) && seen.add(d.UPRN))
+        .map(d => ({ geometry: { coordinates: [d.LNG, d.LAT] }, properties: { label: osAddressLabel(d), layer: 'address' } })) };
+    });
+    p.catch(() => acCache.delete(key));
+    acCache.set(key, p);
+  }
+  return acCache.get(key);
+}
+
+// Every typed word must start a word in the address ("cres" fits "Crescent"), or it isn't safe to pre-pick
+function fits(label, typed) {
+  const words = s => s.toLowerCase().replace(/[,.]/g, ' ').split(/\s+/).filter(Boolean);
+  const have = words(label);
+  return words(typed).every(t => have.some(h => h.startsWith(t)));
+}
+
+function wireAddress(input) {
+  const wrap = input.parentElement, list = wrap.querySelector('ul');
+  const ghost = document.createElement('div');
+  ghost.className = 'ghost'; ghost.setAttribute('aria-hidden', 'true');
+  wrap.appendChild(ghost);
+  let items = [], on = -1, seq = 0;
+
+  const close = () => { list.classList.remove('show'); on = -1; ghost.innerHTML = ''; };
+  const pick = i => {
+    const it = items[i]; if (!it) return;
+    input.value = it.label; coords[input.id] = it.coord;
+    close(); refreshRoute(); autoCalc();
+  };
+  const paint = () => {
+    list.innerHTML = items.length
+      ? items.map((it, i) => `<li data-i="${i}" class="${i === on ? 'on' : ''}"><span>${esc(it.label)}</span>` +
+          `${it.near ? `<small>${r1(it.miles)} mi</small>` : ''}${i === on ? '<kbd>Tab</kbd>' : ''}</li>`).join('')
+      : `<li class="msg">No matches yet. Keep typing, or try a postcode.</li>`;
+    list.classList.add('show');
+    // Finish the word in place when the chosen place starts with what's been typed
+    const typed = input.value, it = items[on];
+    ghost.innerHTML = it && typed && it.label.toLowerCase().startsWith(typed.toLowerCase()) && input.scrollWidth <= input.clientWidth
+      ? `<span>${esc(typed)}</span><i>${esc(it.label.slice(typed.length))}</i>` : '';
+  };
+
+  input.addEventListener('input', () => {
+    delete coords[input.id];
+    refreshRoute();
+    clearTimeout(acTimers[input.id]);
+    ghost.innerHTML = '';
+    // Suggestions on screen are for older text now, so Tab mustn't pick one until fresh results arrive
+    if (on >= 0) { on = -1; if (items.length && list.classList.contains('show')) paint(); }
+    const q = input.value.trim();
+    if (q.length < 3) { close(); return; }
+    const mine = ++seq;
+    acTimers[input.id] = setTimeout(async () => {
+      try {
+        // Most UK house numbers aren't in the map data, so also look up the road alone and keep the typed number
+        // With an OS key, OS Places has the exact house, so the road and postcode workarounds aren't needed
+        const useOS = !!cfg.osKey;
+        const house = useOS ? null : q.match(/^(\d+[a-z]?)[\s,]+(\D.{2,})$/i);
+        // Settled, not all: postcodes come from a different service and still work if the address search is down
+        const [fullR, roadR, pcR] = await Promise.allSettled([
+          useOS ? osLook(q).catch(() => acLook(q)) : acLook(q),
+          house ? acLook(house[2]) : null,
+          useOS ? null : postcodeLookup(q)]);
+        if (mine !== seq) return;
+        const full = fullR.value || {}, road = roadR.value, pc = pcR.value;
+        if (fullR.status === 'rejected' && !pc) throw fullR.reason;
+        const feats = [
+          // A full postcode in what's typed is the surest match, so it goes first
+          ...(pc ? [{ geometry: { coordinates: pc.coord }, properties: { label: pc.label } }] : []),
+          ...(full.features || []),
+          ...(road?.features || []).filter(f => f.properties.layer === 'street')
+            .map(f => ({ ...f, properties: { ...f.properties, label: `${house[1].toUpperCase()} ${f.properties.label}` } }))];
+        const seen = new Set();
+        items = feats.map(f => {
+            const [lon, lat] = f.geometry.coordinates, miles = milesFrom(lon, lat);
+            return { label: cleanLabel(f.properties.label), coord: f.geometry.coordinates, miles, near: miles <= NEAR_MILES };
+          })
+          .filter(it => !seen.has(it.label) && seen.add(it.label))
+          .sort((a, b) => (b.near + (b.near && fits(b.label, q))) - (a.near + (a.near && fits(a.label, q))))   // nearby matches first, then nearby, then the rest
+          .slice(0, 6);
+        on = items.findIndex(it => it.near && fits(it.label, q));   // only pre-pick a nearby place that matches every typed word
+        paint();
+      } catch(_) {
+        if (mine !== seq) return;
+        items = []; on = -1;
+        list.innerHTML = `<li class="msg">Address suggestions are unavailable right now. The free daily limit may have been reached. ` +
+                         `Add the postcode and suggestions will still appear, or type the miles yourself.</li>`;
+        list.classList.add('show');
+      }
+    }, 400);
+  });
+
+  input.addEventListener('keydown', e => {
+    if (!list.classList.contains('show') || !items.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      on = on < 0 ? (e.key === 'ArrowDown' ? 0 : items.length - 1) : (on + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      paint();
+    } else if (((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') && on >= 0) {
+      e.preventDefault(); pick(on);
+    } else if (e.key === 'Escape') close();
+  });
+  list.addEventListener('mousedown', e => {
+    const li = e.target.closest('li[data-i]');
+    if (li) { e.preventDefault(); pick(+li.dataset.i); }
+  });
+  input.addEventListener('blur', () => setTimeout(close, 150));
+  input.addEventListener('change', autoCalc);   // typed and left without picking a suggestion
+}
+
+function renderChips(box) {
+  box.innerHTML = cfg.places.map((p, i) => `<button type="button" class="chip" data-i="${i}">${esc(p.name)}</button>`).join('');
+}
+document.addEventListener('click', e => {
+  const chip = e.target.closest('.chips[data-for] .chip'); if (!chip) return;
+  const input = document.getElementById(chip.parentElement.dataset.for);
+  const p = cfg.places[chip.dataset.i];
+  input.value = p.addr;
+  if (p.coord) coords[input.id] = p.coord; else delete coords[input.id];
+  refreshRoute(); autoCalc();
+});
+
+function addStop(value = '') {
+  const id = `stop-${++stopSeq}`;
+  const div = document.createElement('div');
+  div.className = 'field';
+  div.innerHTML = `
+    <label for="${id}"></label>
+    <div class="stop">
+      <div class="ac"><input id="${id}" data-addr placeholder="Address and town, or postcode" autocomplete="off" autocorrect="off" enterkeyhint="next"><ul></ul></div>
+      <button type="button" class="icon-btn" title="Remove stop">&times;</button>
+    </div>
+    <div class="chips" data-for="${id}"></div>`;
+  document.getElementById('stops').appendChild(div);
+  const input = div.querySelector('input');
+  input.value = value;
+  wireAddress(input);
+  renderChips(div.querySelector('.chips'));
+  div.querySelector('.icon-btn').onclick = () => { div.remove(); delete coords[id]; labelStops(); refreshRoute(); autoCalc(); };
+  labelStops();
+  return input;
+}
+function labelStops() {
+  const rows = [...document.querySelectorAll('#stops > .field')];
+  rows.forEach((r, i) => {
+    r.querySelector('label').textContent = rows.length === 1 ? 'To' : (i === rows.length - 1 ? 'Finally to' : `Then to (stop ${i+1})`);
+    r.querySelector('.icon-btn').hidden = rows.length < 2;
+  });
+}
+const stopInputs = () => [...document.querySelectorAll('#stops input[data-addr]')];
+
+/* ================================================================
+   Route details text (what goes in Oracle's "Route Details")
+   ================================================================ */
+let routeEdited = false;
+
+function shortPlace(addr) {
+  const p = cfg.places.find(p => p.addr === addr);
+  if (p) return p.name;
+  return addr.replace(/(,\s*(England|United Kingdom|UK))+$/i, '').trim();
+}
+function buildRoute() {
+  const pts = [document.getElementById('f-from').value, ...stopInputs().map(i => i.value)].map(s => s.trim()).filter(Boolean);
+  if (!pts.length) return '';
+  if (document.getElementById('f-rt').checked && pts.length > 1) pts.push(pts[0]);
+  return pts.map(shortPlace).join(' to ');
+}
+function refreshRoute() {
+  if (!routeEdited) { document.getElementById('f-route').value = buildRoute(); }
+  countRoute();
+  const url = gmapsUrl(document.getElementById('f-from').value, stopInputs().map(i => i.value), document.getElementById('f-rt').checked);
+  const link = document.getElementById('gmaps');
+  link.hidden = !url;
+  if (url) link.href = url;
+}
+
+// Same journey in Google Maps, so the miles can be checked against what a manager would see
+function gmapsUrl(from, stops, rt) {
+  const pts = [from, ...stops].map(s => (s || '').trim()).filter(Boolean);
+  if (pts.length < 2) return '';
+  const origin = pts[0];
+  const dest = rt ? origin : pts[pts.length - 1];
+  const via = rt ? pts.slice(1) : pts.slice(1, -1);
+  const p = new URLSearchParams({ api: '1', origin, destination: dest, travelmode: 'driving' });
+  if (via.length) p.set('waypoints', via.join('|'));
+  return `https://www.google.com/maps/dir/?${p}`;
+}
+function countRoute() { document.getElementById('route-count').textContent = document.getElementById('f-route').value.length; }
+
+/* ================================================================
+   Distance (OpenRouteService)
+   ================================================================ */
+// A typed postcode beats a text search: the search ignores postcodes and can land on a same-named road miles away
+async function geocode(input) {
+  if (coords[input.id]) return coords[input.id];
+  const text = input.value.trim();
+  if (cfg.osKey) {
+    const hit = (await osLook(text).catch(() => null))?.features?.[0];
+    if (hit) return coords[input.id] = hit.geometry.coordinates;
+  }
+  const pc = await postcodeLookup(text);
+  if (pc) return coords[input.id] = pc.coord;
+  const data = await orsGet('/geocode/search', { text, 'boundary.country': 'GBR', size: 1,
+                                                 'focus.point.lat': HOME.lat, 'focus.point.lon': HOME.lon });
+  const f = data.features?.[0];
+  if (!f) throw new Error(`Couldn't find "${text}". Pick it from the suggestions, or add the postcode.`);
+  const [lon, lat] = f.geometry.coordinates;
+  if (milesFrom(lon, lat) > FAR_MILES) {
+    throw new Error(`"${text}" was matched to ${cleanLabel(f.properties.label)}, ${Math.round(milesFrom(lon, lat))} miles away, which looks wrong. ` +
+                    `Pick the address from the suggestions, or add its postcode.`);
+  }
+  return coords[input.id] = f.geometry.coordinates;
+}
+
+// Work the miles out as soon as there's a start and every stop is filled in. Debounced, because picking a
+// suggestion also blurs the box, and the pick and the blur shouldn't both start a lookup.
+let calcTimer, lastCalcKey = '';
+function autoCalc() {
+  clearTimeout(calcTimer);
+  calcTimer = setTimeout(() => {
+    const boxes = [document.getElementById('f-from'), ...stopInputs()];
+    if (boxes.length < 2 || boxes.some(i => !i.value.trim())) return;
+    // Still typing in one of them: wait for a pick or for the box to be left, or a half-typed address gets looked up
+    if (boxes.some(i => i === document.activeElement && !coords[i.id])) return;
+    const key = boxes.map(i => i.value.trim()).join('|') + '|' + document.getElementById('f-rt').checked;
+    if (key === lastCalcKey) return;   // nothing changed since the last calculation
+    lastCalcKey = key;
+    calcMiles();
+  }, 350);
+}
+
+async function calcMiles() {
+  const box = document.getElementById('calc-result');
+  const show = html => { box.innerHTML = html; box.classList.add('show'); };
+  if (!cfg.apiKey) return show('Add a route API key in Settings first, or type the miles in yourself.');
+  const inputs = [document.getElementById('f-from'), ...stopInputs()].filter(i => i.value.trim());
+  if (inputs.length < 2) return show('Enter where you started and at least one place you went.');
+  show('Working it out…');
+  try {
+    const pts = [];
+    for (const i of inputs) pts.push(await geocode(i));
+    if (document.getElementById('f-rt').checked) pts.push(pts[0]);
+    const res = await fetch(`${ORS}/v2/directions/driving-car`, {
+      method: 'POST',
+      headers: { 'Authorization': cfg.apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coordinates: pts })
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error?.message || `Route service error ${res.status}`); }
+    const miles = r1((await res.json()).routes[0].summary.distance / 1609.344);
+    document.getElementById('f-miles').value = miles;
+    show(`<b>${miles} miles</b> by the quickest driving route${document.getElementById('f-rt').checked ? ', including the drive back' : ''}. Use <i>Check in Google Maps</i> to compare.`);
+  } catch(e) { show(esc(e.message)); }
+}
+
+/* ================================================================
+   Save / edit trip
+   ================================================================ */
+function resetForm() {
+  editingId = null; routeEdited = false; coords = {}; lastCalcKey = "";
+  document.getElementById('f-date').value = today();
+  document.getElementById('f-from').value = '';
+  document.getElementById('stops').innerHTML = ''; stopSeq = 0; addStop();
+  ['f-miles','f-reason','f-route'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-pass').value = 0;
+  document.getElementById('f-rt').checked = false;
+  document.getElementById('f-type').value = 'Business';
+  document.getElementById('calc-result').classList.remove('show');
+  document.getElementById('save-trip').textContent = 'Save trip'; document.getElementById('trip-heading').textContent = 'Log a trip';
+  refreshRoute();
+}
+
+function saveTrip() {
+  const g = id => document.getElementById(id).value.trim();
+  const miles = parseFloat(g('f-miles'));
+  const route = g('f-route') || buildRoute();
+  const missing = [];
+  if (!g('f-date')) missing.push('date');
+  if (!(miles > 0)) missing.push('miles');
+  if (!g('f-reason')) missing.push('reason for journey');
+  if (!route) missing.push('route');
+  if (missing.length) return toast(`Please add the ${missing.join(', ')}`);
+
+  const trip = {
+    id: editingId || Date.now(), date: g('f-date'), type: g('f-type'),
+    from: g('f-from'), stops: stopInputs().map(i => i.value.trim()).filter(Boolean),
+    rt: document.getElementById('f-rt').checked, miles: r1(miles),
+    passengers: parseInt(g('f-pass')) || 0, reason: g('f-reason'), route,
+    vehicle: cfg.vehicle, status: 'pending', updated: Date.now()
+  };
+  if (editingId) {
+    const old = trips.find(t => t.id === editingId);
+    trip.status = old?.status || 'pending';
+    trip.vehicle = old?.vehicle || cfg.vehicle;
+    trips = trips.filter(t => t.id !== editingId);
+  }
+  trips.push(trip);
+  saveTrips();
+  toast(editingId ? 'Trip updated' : `Saved: ${trip.miles} miles`);
+  resetForm();
+  renderReasonChips();
+  switchTab('log');
+}
+
+function editTrip(id) {
+  const t = trips.find(t => t.id === id); if (!t) return;
+  resetForm();
+  editingId = id;
+  document.getElementById('f-date').value = t.date;
+  document.getElementById('f-type').value = t.type;
+  document.getElementById('f-from').value = t.from;
+  document.getElementById('stops').innerHTML = ''; stopSeq = 0;
+  (t.stops.length ? t.stops : ['']).forEach(s => addStop(s));
+  document.getElementById('f-rt').checked = t.rt;
+  document.getElementById('f-miles').value = t.miles;
+  document.getElementById('f-pass').value = t.passengers;
+  document.getElementById('f-reason').value = t.reason;
+  document.getElementById('f-route').value = t.route;
+  routeEdited = t.route !== buildRoute();
+  refreshRoute();
+  document.getElementById('save-trip').textContent = 'Update trip'; document.getElementById('trip-heading').textContent = 'Edit trip';
+  switchTab('trip');
+}
+
+function duplicateTrip(id) {
+  editTrip(id);
+  editingId = null;
+  document.getElementById('f-date').value = today();
+  document.getElementById('save-trip').textContent = 'Save trip'; document.getElementById('trip-heading').textContent = 'Log a trip';
+}
+
+function deleteTrip(id) {
+  if (!confirm('Delete this trip?')) return;
+  trips = trips.filter(t => t.id !== id);
+  deleted.push({ id, deleted: true, updated: Date.now() });
+  saveTrips(); renderLog();
+}
+
+function toggleStatus(id) {
+  const t = trips.find(t => t.id === id);
+  t.status = t.status === 'sent' ? 'pending' : 'sent';
+  t.updated = Date.now();
+  saveTrips(); renderLog();
+}
+
+function renderReasonChips() {
+  const counts = {};
+  trips.forEach(t => { if (t.reason) counts[t.reason] = (counts[t.reason] || 0) + 1; });
+  const top = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5).map(e => e[0]);
+  const box = document.getElementById('reason-chips');
+  box.innerHTML = top.map(r => `<button type="button" class="chip">${esc(r)}</button>`).join('');
+  box.querySelectorAll('.chip').forEach((c, i) => c.onclick = () => document.getElementById('f-reason').value = top[i]);
+}
+
+/* ================================================================
+   Odometer: tax-year miles on rolling digits, and how far into the
+   45p band she is
+   ================================================================ */
+function renderOdo() {
+  const ty = taxYear();
+  const all = trips.filter(t => t.date >= ty.start && t.date <= ty.end).reduce((s,t) => s + t.miles, 0);
+  const car = yearMiles();
+  const digits = Math.min(Math.round(all * 10), 999999).toString().padStart(6, '0');
+  const box = document.getElementById('odo-digits');
+  if (!box.children.length) {
+    box.innerHTML = [...digits].map((_, i) =>
+      `<div class="odo-cell${i === 5 ? ' tenth' : ''}"><div class="odo-strip">${'0123456789'.split('').map(n => `<span>${n}</span>`).join('')}</div></div>`).join('');
+  }
+  [...digits].forEach((n, i) => { box.children[i].firstChild.style.transform = `translateY(-${n * 1.32}em)`; });
+  box.setAttribute('aria-label', `${r1(all).toLocaleString()} miles this tax year`);
+  document.getElementById('odo-year').textContent = ty.label;
+
+  const left = cfg.thresh - car;
+  document.getElementById('odo-fill').style.width = `${Math.min(100, car / cfg.thresh * 100)}%`;
+  document.getElementById('odo-rate').innerHTML = cfg.vehicle === 'moto' ? `<b>${cfg.r3}p</b> a mile`
+    : left > 0 ? `<b>${cfg.r1}p</b> a mile now` : `<b>${cfg.r2}p</b> a mile now`;
+  document.getElementById('odo-left').textContent = cfg.vehicle === 'moto' ? ''
+    : left > 0 ? `${Math.round(left).toLocaleString()} to go at ${cfg.r1}p` : `past ${cfg.thresh.toLocaleString()}`;
+}
+
+/* ================================================================
+   Log
+   ================================================================ */
+function renderLog() {
+  const est = estimates();
+  const ty = taxYear();
+  const yt = trips.filter(t => t.date >= ty.start && t.date <= ty.end);
+  const mi = yearMiles();
+  document.getElementById('st-money').textContent = money(yt.reduce((s,t) => s + est[t.id], 0));
+  document.getElementById('st-trips').textContent = yt.length;
+  document.getElementById('st-rate').textContent = cfg.vehicle === 'moto' ? `${cfg.r3}p` : `${mi >= cfg.thresh ? cfg.r2 : cfg.r1}p`;
+
+  const banner = document.getElementById('threshold');
+  const left = cfg.thresh - mi;
+  banner.hidden = !(cfg.vehicle === 'car' && left < 500);
+  banner.textContent = left <= 0
+    ? `You're past ${cfg.thresh.toLocaleString()} miles this tax year, so new trips are estimated at ${cfg.r2}p a mile.`
+    : `${r1(left)} miles left before the rate drops to ${cfg.r2}p a mile.`;
+
+  const list = document.getElementById('trip-list');
+  if (!trips.length) { list.innerHTML = `<div class="empty"><b>No trips yet</b>Log your first one from New trip.</div>`; return; }
+
+  const sorted = [...trips].sort((a,b) => b.date.localeCompare(a.date) || b.id - a.id);
+  let html = '', month = '';
+  for (const t of sorted) {
+    const maps = gmapsUrl(t.from, t.stops, t.rt);
+    const m = t.date.slice(0, 7);
+    if (m !== month) {
+      month = m;
+      const mt = sorted.filter(x => x.date.startsWith(m));
+      html += `<div class="month"><h3>${parse(m + '-01').toLocaleDateString('en-GB', { month:'long', year:'numeric' })}</h3>
+               <span>${r1(mt.reduce((s,x) => s + x.miles, 0))} miles, ${money(mt.reduce((s,x) => s + est[x.id], 0))}</span></div>`;
+    }
+    const d = parse(t.date);
+    html += `
+      <div class="trip">
+        <div class="day"><b>${d.getDate()}</b><span>${d.toLocaleDateString('en-GB', { weekday:'short' })}</span></div>
+        <div>
+          <div class="route">${esc(t.route)}</div>
+          <div class="meta">${esc(t.type)}: ${esc(t.reason)}${t.passengers ? `, ${t.passengers} passenger${t.passengers > 1 ? 's' : ''}` : ''}</div>
+        </div>
+        <div class="nums"><b>${t.miles} mi</b><span>${money(est[t.id])}</span></div>
+        <div class="actions">
+          <span class="tag ${t.status}">${t.status === 'sent' ? 'In Oracle' : 'Not in Oracle yet'}</span>
+          <button class="link" onclick="toggleStatus(${t.id})">${t.status === 'sent' ? 'mark as not in Oracle' : 'mark as in Oracle'}</button>
+          ${maps ? `<a class="link" href="${esc(maps)}" target="_blank" rel="noopener">map</a>` : ''}
+          <button class="link" onclick="editTrip(${t.id})">edit</button>
+          <button class="link" onclick="duplicateTrip(${t.id})">repeat</button>
+          <button class="link" onclick="deleteTrip(${t.id})">delete</button>
+        </div>
+      </div>`;
+  }
+  list.innerHTML = html;
+}
+
+/* ================================================================
+   Oracle handoff
+   ================================================================ */
+const pending = () => trips.filter(t => t.status !== 'sent').sort((a,b) => a.date.localeCompare(b.date) || a.id - b.id);
+
+function updateBadge() {
+  const n = pending().length, b = document.getElementById('pending-badge');
+  b.hidden = !n; b.textContent = n;
+}
+
+function oracleDate(s) { const [y,m,d] = s.split('-'); return `${d}-${MON[+m-1]}-${y}`; }
+
+function renderOracle() {
+  const p = pending();
+  const el = document.getElementById('oracle-status');
+  el.innerHTML = p.length
+    ? `<div class="alert warn">${p.length} trip${p.length > 1 ? 's' : ''} (${r1(p.reduce((s,t) => s + t.miles, 0))} miles) not in Oracle yet:</div>
+       <table class="rpt"><tr><th>Date</th><th>Route</th><th class="n">Miles</th></tr>
+       ${p.map(t => `<tr><td>${fmtDate(t.date)}</td><td>${esc(t.route)}</td><td class="n">${t.miles}</td></tr>`).join('')}</table>`
+    : `<div class="alert ok">Everything is in Oracle. Nothing to send.</div>`;
+  document.getElementById('copy-pending').disabled = !p.length;
+  document.getElementById('mark-all-sent').disabled = !p.length;
+}
+
+async function copyPending() {
+  const payload = 'MILEAGE-QUEUE:' + JSON.stringify(pending().map(t => ({
+    id: t.id, date: oracleDate(t.date), reg: cfg.reg, type: t.type,
+    reason: t.reason, route: t.route, miles: String(t.miles), passengers: String(t.passengers || 0)
+  })));
+  try { await navigator.clipboard.writeText(payload); toast(`Copied ${pending().length} trips. Now open Oracle and click the bookmark.`); }
+  catch(_) { prompt('Copy this text (Ctrl+C), then click the bookmark in Oracle:', payload); }
+}
+
+function markAllSent() {
+  if (!confirm('Mark every trip on this list as entered in Oracle?')) return;
+  trips.forEach(t => { if (t.status !== 'sent') { t.status = 'sent'; t.updated = Date.now(); } });
+  saveTrips(); renderOracle();
+}
+
+/* The bookmarklet. Runs inside the Oracle page, not here. It holds a queue
+   of trips in Oracle's own localStorage so each click fills the next one.
+   It fills fields only — Jess reviews and submits herself. */
+function oracleFill() {
+  const QKEY = 'jessMileageQueue';
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const say = m => alert('Fill Oracle Mileage\n\n' + m);
+
+  const byLabel = text => {
+    for (const l of document.querySelectorAll('label')) {
+      if (l.textContent.trim() === text && l.htmlFor) return document.getElementById(l.htmlFor);
+    }
+    return null;
+  };
+  const settle = async () => {
+    await sleep(300);
+    for (let i = 0; i < 40; i++) {
+      const p = window.AdfPage && AdfPage.PAGE;
+      if (!p || !p.isSynchronizedWithServer || p.isSynchronizedWithServer()) return;
+      await sleep(250);
+    }
+  };
+  const typeInto = async (label, value) => {
+    const el = byLabel(label);
+    if (!el || el.disabled) return false;
+    el.focus();
+    el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.blur();
+    await settle();
+    return el.value.trim() !== '';
+  };
+  const choose = async (label, optionText) => {
+    const el = byLabel(label);
+    if (!el) return false;
+    const base = el.id.replace(/::content$/, '');
+    const comp = window.AdfPage && AdfPage.PAGE.findComponentByAbsoluteId(base);
+    const opt = [...document.querySelectorAll(`[id="${base}::pop"] li[role=option]`)].find(li => li.textContent.trim() === optionText);
+    if (!opt) return false;
+    if (comp && comp.setValue) { comp.setValue(opt.getAttribute('_adfiv')); }
+    else {
+      document.getElementById(base + '::drop')?.click();
+      await sleep(300);
+      ['mousedown','mouseup','click'].forEach(t => opt.dispatchEvent(new MouseEvent(t, { bubbles: true })));
+    }
+    await settle();
+    return el.value.trim() === optionText;
+  };
+
+  (async () => {
+    if (!byLabel('Journey Date')) return say('Open a new Mileage Personal Contribution in Oracle first (the screen with Journey Date, Vehicle and Journey Type), then click this again.');
+
+    let queue = [];
+    try { queue = JSON.parse(localStorage.getItem(QKEY) || '[]'); } catch(_) {}
+
+    if (queue.length && !confirm(`Next trip: ${queue[0].date} — ${queue[0].route} (${queue[0].miles} mi).\n${queue.length} left.\n\nOK = fill it in\nCancel = load a new list instead`)) queue = [];
+
+    if (!queue.length) {
+      let text = '';
+      try { text = await navigator.clipboard.readText(); } catch(_) {}
+      if (!text.startsWith('MILEAGE-QUEUE:')) text = prompt('Paste the trips you copied from the Mileage Tracker:') || '';
+      if (!text.startsWith('MILEAGE-QUEUE:')) return say("That doesn't look like trips copied from the Mileage Tracker. Go to the Oracle tab in the tracker and click \"Copy trips waiting to go into Oracle\".");
+      queue = JSON.parse(text.slice('MILEAGE-QUEUE:'.length));
+      if (!queue.length) return say('No trips in that list.');
+    }
+
+    const t = queue[0];
+    const failed = [];
+    if (!await typeInto('Journey Date', t.date)) failed.push('Journey Date');
+    await sleep(600);   // vehicle list depends on the date
+    if (t.reg && !await typeInto('Vehicle', t.reg)) failed.push('Vehicle');
+    if (!await choose('Journey Type', t.type)) failed.push('Journey Type');
+    if (!await typeInto('Reason For Journey', t.reason)) failed.push('Reason For Journey');
+    if (!await typeInto('Route Details', t.route)) failed.push('Route Details');
+    if (!await typeInto('Miles', t.miles)) failed.push('Miles');
+    await typeInto('No of Passengers', t.passengers);
+
+    queue.shift();
+    localStorage.setItem(QKEY, JSON.stringify(queue));
+    say(`Filled: ${t.date} — ${t.miles} miles.\n` +
+        (failed.length ? `\nPlease fill these in yourself: ${failed.join(', ')}${!t.reg ? '\n(No vehicle registration is saved in the tracker settings.)' : ''}\n` : '') +
+        `\nCheck everything, then Continue and Submit.\n` +
+        (queue.length ? `${queue.length} trip${queue.length > 1 ? 's' : ''} still to go. Start a new contribution and click the bookmark again.` : 'That was the last one!'));
+  })();
+}
+
+/* ================================================================
+   Reports
+   ================================================================ */
+function setRange(kind) {
+  const now = new Date(); let a, b;
+  if (kind === 'month') { a = new Date(now.getFullYear(), now.getMonth(), 1); b = new Date(now.getFullYear(), now.getMonth() + 1, 0); }
+  if (kind === 'lastmonth') { a = new Date(now.getFullYear(), now.getMonth() - 1, 1); b = new Date(now.getFullYear(), now.getMonth(), 0); }
+  if (kind === 'taxyear') { const ty = taxYear(); a = parse(ty.start); b = parse(ty.end); }
+  document.getElementById('rp-from').value = iso(a);
+  document.getElementById('rp-to').value = iso(b);
+  renderReport();
+}
+
+function renderReport() {
+  const from = document.getElementById('rp-from').value, to = document.getElementById('rp-to').value;
+  const est = estimates();
+  const rows = trips.filter(t => t.date >= from && t.date <= to).sort((a,b) => a.date.localeCompare(b.date));
+  const el = document.getElementById('report');
+  if (!rows.length) { el.innerHTML = `<div class="empty">No trips between these dates.</div>`; return; }
+  const mi = rows.reduce((s,t) => s + t.miles, 0), mo = rows.reduce((s,t) => s + est[t.id], 0);
+  el.innerHTML = `
+    <p style="margin-bottom:10px;font-size:.88rem"><b>Mileage: ${fmtLong(from)} to ${fmtLong(to)}</b>${cfg.reg ? ` · Vehicle ${esc(cfg.reg)}` : ''}</p>
+    <table class="rpt">
+      <tr><th>Date</th><th>Type</th><th>Route / reason</th><th class="n">Miles</th><th class="n">Est.</th></tr>
+      ${rows.map(t => `<tr><td>${fmtLong(t.date)}</td><td>${esc(t.type)}</td>
+        <td>${esc(t.route)}<br><span style="color:var(--muted)">${esc(t.reason)}</span></td>
+        <td class="n">${t.miles}</td><td class="n">${money(est[t.id])}</td></tr>`).join('')}
+      <tr class="total"><td colspan="3">${rows.length} trips</td><td class="n">${r1(mi)}</td><td class="n">${money(mo)}</td></tr>
+    </table>`;
+}
+
+/* ================================================================
+   Settings & backup
+   ================================================================ */
+function renderSettings() {
+  document.getElementById('s-reg').value = cfg.reg;
+  document.getElementById('s-veh').value = cfg.vehicle;
+  document.getElementById('s-key').value = cfg.apiKey;
+  document.getElementById('s-oskey').value = cfg.osKey || '';
+  document.getElementById('s-r1').value = cfg.r1;
+  document.getElementById('s-r2').value = cfg.r2;
+  document.getElementById('s-r3').value = cfg.r3;
+  document.getElementById('s-th').value = cfg.thresh;
+  renderPlaces();
+}
+function renderPlaces() {
+  document.getElementById('places').innerHTML = cfg.places.length
+    ? cfg.places.map((p, i) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.86rem">
+        <span><b>${esc(p.name)}</b> · ${esc(p.addr)}</span><button class="link" onclick="removePlace(${i})">remove</button></div>`).join('')
+    : `<p class="hint">None yet. Try adding Home and your office.</p>`;
+  document.querySelectorAll('.chips[data-for]').forEach(renderChips);
+}
+function addPlace() {
+  const name = document.getElementById('pl-name').value.trim(), addr = document.getElementById('pl-addr').value.trim();
+  if (!name || !addr) return toast('Enter a name and an address');
+  // Keep the exact spot if it was picked from the suggestions, so tapping the place needs no lookup
+  cfg.places.push({ name, addr, ...(coords['pl-addr'] ? { coord: coords['pl-addr'] } : {}) });
+  delete coords['pl-addr'];
+  saveCfg(); renderPlaces();
+  document.getElementById('pl-name').value = document.getElementById('pl-addr').value = '';
+}
+function removePlace(i) { cfg.places.splice(i, 1); saveCfg(); renderPlaces(); }
+
+function saveSettings() {
+  const n = (id, d) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? d : v; };
+  cfg.reg = document.getElementById('s-reg').value.trim().toUpperCase();
+  cfg.vehicle = document.getElementById('s-veh').value;
+  cfg.apiKey = document.getElementById('s-key').value.trim() || ORS_DEFAULT_KEY;
+  cfg.osKey = document.getElementById('s-oskey').value.trim() || OS_DEFAULT_KEY;
+  acCache.clear();
+  cfg.r1 = n('s-r1', 45); cfg.r2 = n('s-r2', 25); cfg.r3 = n('s-r3', 24); cfg.thresh = n('s-th', 10000);
+  saveCfg();
+  renderSettings(); renderOdo();
+  toast('Settings saved');
+}
+
+function download(name, text, type) {
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function backupJSON() {
+  const { apiKey, ...rest } = cfg;
+  download(`mileage-backup-${today()}.json`, JSON.stringify({ version: 2, trips, cfg: rest }, null, 2), 'application/json');
+}
+function restoreJSON(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data.trips)) throw 0;
+      if (!confirm(`Replace the ${trips.length} trips here with ${data.trips.length} trips from the backup?`)) return;
+      // Stamped as just changed, so the restored copies win when they merge with the synced log
+      trips = data.trips.map(t => ({ ...t, updated: Date.now() })); cfg = { ...cfg, ...(data.cfg || {}) };
+      saveTrips(); saveCfg(); renderSettings(); toast('Backup restored');
+    } catch(_) { toast("That file isn't a Mileage Tracker backup"); }
+  };
+  reader.readAsText(file);
+}
+function exportCSV() {
+  if (!trips.length) return toast('No trips to export');
+  const est = estimates();
+  const q = v => `"${String(v).replace(/"/g, '""')}"`;
+  const rows = [['Journey Date','Journey Type','Reason For Journey','Route Details','Miles','No of Passengers','Vehicle','Estimated £','In Oracle']]
+    .concat([...trips].sort((a,b) => a.date.localeCompare(b.date)).map(t =>
+      [oracleDate(t.date), t.type, q(t.reason), q(t.route), t.miles, t.passengers, cfg.reg, est[t.id].toFixed(2), t.status === 'sent' ? 'Yes' : 'No']));
+  download(`mileage-${today()}.csv`, rows.map(r => r.join(',')).join('\n'), 'text/csv;charset=utf-8');
+}
+
+/* ================================================================
+   UI plumbing
+   ================================================================ */
+function switchTab(name) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+  document.body.classList.toggle('on-trip', name === 'trip');
+  if (name === 'log') renderLog();
+  if (name === 'oracle') renderOracle();
+  if (name === 'reports') renderReport();
+  if (name === 'settings') renderSettings();
+  window.scrollTo(0, 0);
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ================================================================
+   Init
+   ================================================================ */
+load();
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+wireAddress(document.getElementById('f-from'));
+wireAddress(document.getElementById('pl-addr'));
+renderChips(document.querySelector('.chips[data-for="f-from"]'));
+document.getElementById('add-stop').onclick = () => addStop().focus();
+document.getElementById('f-rt').onchange = () => { refreshRoute(); autoCalc(); };
+document.getElementById('f-route').oninput = () => { routeEdited = true; countRoute(); };
+document.getElementById('calc').onclick = calcMiles;
+document.getElementById('save-trip').onclick = saveTrip;
+document.getElementById('copy-pending').onclick = copyPending;
+document.getElementById('mark-all-sent').onclick = markAllSent;
+document.getElementById('save-settings').onclick = saveSettings;
+document.getElementById('pl-add').onclick = addPlace;
+document.getElementById('bk-json').onclick = backupJSON;
+document.getElementById('bk-csv').onclick = exportCSV;
+document.getElementById('bk-restore').onclick = () => document.getElementById('bk-file').click();
+document.getElementById('bk-file').onchange = e => e.target.files[0] && restoreJSON(e.target.files[0]);
+document.querySelectorAll('[data-range]').forEach(b => b.onclick = () => setRange(b.dataset.range));
+document.getElementById('rp-from').onchange = document.getElementById('rp-to').onchange = renderReport;
+document.getElementById('bookmarklet').href = 'javascript:(' + encodeURIComponent(oracleFill.toString()) + ')()';
+document.getElementById('bookmarklet').onclick = e => { e.preventDefault(); toast('Drag this onto your bookmarks bar. It only works on the Oracle page.'); };
+document.getElementById('help-video-src').onerror = () => {
+  document.getElementById('help-video').hidden = true;
+  document.getElementById('video-missing').hidden = false;
+};
+
+document.body.classList.add('on-trip');
+renderOdo();
+resetForm();
+loadConfig();
+pullSettings();
+runSync();
+// Coming back to the app (switching tabs, unlocking the phone) picks up trips logged elsewhere
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { runSync(); pullSettings(); } });
+renderReasonChips();
+setRange('month');
+updateBadge();
+</script>
+</body>
+</html>

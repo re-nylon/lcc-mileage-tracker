@@ -1,0 +1,12 @@
+# Saved copy of a personal Oracle HR page: personal data, never commit
+mileage oracle/
+
+# Generated at deploy time
+deploy/site/
+node_modules/
+.wrangler/
+
+# Superseded by the Help tab inside the tracker
+Mileage Tracker - How To Guide.pdf
+
+.DS_Store
